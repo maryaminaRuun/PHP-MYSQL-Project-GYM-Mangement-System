@@ -47,3 +47,16 @@ A web-based Gym Management System designed to simplify gym operations such as me
 - Printable/PDF-ready reports, receipts, audit logs and secure password migration
 
 > Before upgrading an existing installation, back up its database. The canonical fresh-install schema is `database/schema.sql`.
+
+### Existing installation upgrade
+
+Back up the database, then import `database/upgrade.sql`. It preserves existing records while adding accounting, attendance, payroll, receipts, and audit structures. The upgrade uses `ADD COLUMN IF NOT EXISTS`, supported by current MariaDB releases commonly bundled with XAMPP; check compatibility if your server is Oracle MySQL.
+
+### Accounting workflow
+
+- Membership payments debit Cash/Bank and credit Membership Receivable.
+- Expenses debit Operating Expense and credit Cash/Bank.
+- Payroll debits Salary Expense and credits Cash/Bank.
+- Manual balanced adjustments can be posted from General Journal.
+- Financial Statements provides date-filtered Profit & Loss and Balance Sheet.
+- Every financial list can be printed; receipts support PDF printing and reports support CSV export.

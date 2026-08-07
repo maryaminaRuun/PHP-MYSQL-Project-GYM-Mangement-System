@@ -5,6 +5,7 @@ include 'modals/charge-income-modal.php';
 $message = [];
 
 if (isset($_POST['btnSave'])) {
+    verify_csrf();
     $memberId = (int) ($_POST['member'] ?? 0);
     $chargeId = (int) ($_POST['charge'] ?? 0);
     $bankId = (int) ($_POST['bank'] ?? 0);
@@ -23,11 +24,16 @@ if (isset($_POST['btnSave'])) {
         $receipt = 'RCP-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(3)));
         $stmt = $conn->prepare('INSERT INTO payments(receipt_no,member_id,charge_id,user_id,amount,bank_id) VALUES(?,?,?,?,?,?)');
         $stmt->execute([$receipt,$memberId,$chargeId,$_SESSION['userId'],$amount,$bankId]);
+        $paymentId=(int)$conn->lastInsertId();
         $conn->prepare('UPDATE banks SET balance=balance+? WHERE id=?')->execute([$amount,$bankId]);
         $newPaid = $alreadyPaid + $amount;
         $status = $newPaid >= (float)$charge['Price'] ? 'Paid' : 'Partially Paid';
         $conn->prepare('UPDATE charges SET status=? WHERE id=?')->execute([$status,$chargeId]);
-        audit('create','payment',(int)$conn->lastInsertId(),['receipt_no'=>$receipt,'amount'=>$amount]);
+        post_journal(date('Y-m-d'),'Membership payment '.$receipt,'payment',$paymentId,[
+            ['account_id'=>account_id('1000'),'debit'=>$amount,'credit'=>0],
+            ['account_id'=>account_id('1100'),'debit'=>0,'credit'=>$amount]
+        ]);
+        audit('create','payment',$paymentId,['receipt_no'=>$receipt,'amount'=>$amount]);
         $conn->commit();
         $message = ["Payment recorded. Receipt: {$receipt}", "success"];
     } catch (Throwable $e) {
@@ -77,7 +83,7 @@ if (isset($_POST['btnSave'])) {
                                 <td><?= $payment['amount']; ?></td>
                                 <td><?= $payment['PaymentDate']; ?></td>
                                 <td><?= read_column('banks', "name", $payment['bank_id']); ?></td>
-                                <td><?= escape($payment['receipt_no'] ?? '—'); ?></td>
+                                <td><a href="receipt.php?id=<?= (int)$payment['id'] ?>" class="btn btn-sm btn-outline-primary"><?= escape($payment['receipt_no'] ?? 'View'); ?></a></td>
                             </tr>
                         <?php } ?>
                     </tbody>

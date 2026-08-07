@@ -128,8 +128,12 @@
         <li class="menu-item"><a href="attendance.php" class="menu-link"><i class="menu-icon tf-icons bx bx-calendar-check"></i><div>Attendance</div></a></li>
 
         <li class="menu-header small text-uppercase"><span class="menu-header-text">Accounting</span></li>
+        <li class="menu-item"><a href="accounts.php" class="menu-link"><i class="menu-icon tf-icons bx bx-book"></i><div>Chart of Accounts</div></a></li>
+        <li class="menu-item"><a href="journal.php" class="menu-link"><i class="menu-icon tf-icons bx bx-transfer"></i><div>General Journal</div></a></li>
         <li class="menu-item"><a href="expenses.php" class="menu-link"><i class="menu-icon tf-icons bx bx-receipt"></i><div>Expenses</div></a></li>
+        <li class="menu-item"><a href="payroll.php" class="menu-link"><i class="menu-icon tf-icons bx bx-wallet"></i><div>Payroll</div></a></li>
         <li class="menu-item"><a href="reports.php" class="menu-link"><i class="menu-icon tf-icons bx bx-line-chart"></i><div>Reports</div></a></li>
+        <li class="menu-item"><a href="financial-statements.php" class="menu-link"><i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i><div>Financial Statements</div></a></li>
 
 
 

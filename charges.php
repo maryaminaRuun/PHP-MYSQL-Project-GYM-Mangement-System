@@ -63,6 +63,7 @@ if (isset($_POST['btnCharge'])) {
                                 <td><?= $charge['remarks']; ?></td>
                                 <td><?= getStatus($charge['status']); ?></td>
                                 <td>
+                                    <a href="invoice.php?id=<?= (int)$charge['id'] ?>" class="btn btn-outline-secondary btn-sm">Invoice</a>
                                     <!-- Example action to charge a member -->
                                     <form method="POST" action="">
                                         <input type="hidden" name="member_id" value="<?= $charge['member_id']; ?>">

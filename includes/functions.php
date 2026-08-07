@@ -139,6 +139,34 @@ function audit(string $action, string $entity, ?int $entityId = null, array $det
   ]);
 }
 
+function account_id(string $code): int
+{
+  global $conn;
+  $stmt = $conn->prepare("SELECT id FROM accounts WHERE code=? AND status='Active'");
+  $stmt->execute([$code]);
+  $id = $stmt->fetchColumn();
+  if (!$id) throw new RuntimeException("Accounting account {$code} is not configured.");
+  return (int) $id;
+}
+
+function post_journal(string $date, string $description, string $sourceType, int $sourceId, array $lines): int
+{
+  global $conn;
+  $debits = 0.0; $credits = 0.0;
+  foreach ($lines as $line) { $debits += (float)($line['debit'] ?? 0); $credits += (float)($line['credit'] ?? 0); }
+  if ($debits <= 0 || abs($debits - $credits) > 0.005) throw new RuntimeException('Journal entry is not balanced.');
+  $existing = $conn->prepare("SELECT id FROM journal_entries WHERE source_type=? AND source_id=? AND status='Posted'");
+  $existing->execute([$sourceType,$sourceId]);
+  if ($id=$existing->fetchColumn()) return (int)$id;
+  $entryNo='JE-'.date('Ymd').'-'.strtoupper(bin2hex(random_bytes(3)));
+  $stmt=$conn->prepare('INSERT INTO journal_entries(entry_no,entry_date,description,source_type,source_id,user_id) VALUES(?,?,?,?,?,?)');
+  $stmt->execute([$entryNo,$date,$description,$sourceType,$sourceId,$_SESSION['userId']??null]);
+  $entryId=(int)$conn->lastInsertId();
+  $lineStmt=$conn->prepare('INSERT INTO journal_lines(journal_entry_id,account_id,debit,credit,memo) VALUES(?,?,?,?,?)');
+  foreach($lines as $line) $lineStmt->execute([$entryId,(int)$line['account_id'],(float)($line['debit']??0),(float)($line['credit']??0),$line['memo']??null]);
+  return $entryId;
+}
+
 // Function to show a message (e.g., success or error messages)
 function showMessage($ms)
 {
@@ -162,6 +190,13 @@ function charge(){
     $sql = "INSERT IGNORE INTO charges (`member_id`, `user_id`, `Price`, `billing_month`, `remarks`) VALUES(?,?,?,?,?)";
     $stm = $conn->prepare($sql);
     $stm->execute([$member_id, $user, $price, $billingMonth, $remark]);
+    if ($stm->rowCount()) {
+      $chargeId=(int)$conn->lastInsertId();
+      post_journal(date('Y-m-d'),$remark,'charge',$chargeId,[
+        ['account_id'=>account_id('1100'),'debit'=>(float)$price],
+        ['account_id'=>account_id('4000'),'credit'=>(float)$price]
+      ]);
+    }
   }
   return $stm  ? true : false;
 }
@@ -233,6 +268,13 @@ function chargeMember($member_id)
 
     // Execute the statement
     $result = $stmt->execute();
+    if ($result) {
+      $chargeId=(int)$conn->lastInsertId();
+      post_journal(date('Y-m-d'),$remark,'charge',$chargeId,[
+        ['account_id'=>account_id('1100'),'debit'=>(float)$price],
+        ['account_id'=>account_id('4000'),'credit'=>(float)$price]
+      ]);
+    }
 
     // Return whether the insert was successful
     if ($result) {

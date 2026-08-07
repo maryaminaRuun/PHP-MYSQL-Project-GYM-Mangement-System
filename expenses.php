@@ -24,6 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$expenseNo, (int) $_POST['category_id'], $bankId, $amount, $_POST['expense_date'], trim($_POST['payee']), trim($_POST['description'] ?? ''), trim($_POST['reference_no'] ?? ''), $_SESSION['userId']]);
                 $expenseId = (int) $conn->lastInsertId();
                 $conn->prepare('UPDATE banks SET balance = balance - ? WHERE id = ?')->execute([$amount, $bankId]);
+                post_journal($_POST['expense_date'],'Expense '.$expenseNo,'expense',$expenseId,[
+                    ['account_id'=>account_id('5000'),'debit'=>$amount,'credit'=>0],
+                    ['account_id'=>account_id('1000'),'debit'=>0,'credit'=>$amount]
+                ]);
                 audit('create', 'expense', $expenseId, ['expense_no' => $expenseNo, 'amount' => $amount]);
                 $conn->commit();
                 $message = ['Expense recorded successfully.', 'success'];

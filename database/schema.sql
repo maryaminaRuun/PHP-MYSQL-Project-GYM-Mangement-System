@@ -125,7 +125,54 @@ CREATE TABLE IF NOT EXISTS password_resets (
   token VARCHAR(255) NOT NULL UNIQUE, expires_at DATETIME NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS accounts (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(20) NOT NULL UNIQUE, name VARCHAR(120) NOT NULL,
+  type ENUM('Asset','Liability','Equity','Revenue','Expense') NOT NULL,
+  normal_balance ENUM('Debit','Credit') NOT NULL,
+  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS journal_entries (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  entry_no VARCHAR(30) NOT NULL UNIQUE, entry_date DATE NOT NULL,
+  description VARCHAR(255) NOT NULL, source_type VARCHAR(40), source_id BIGINT UNSIGNED,
+  status ENUM('Posted','Void') NOT NULL DEFAULT 'Posted', user_id INT UNSIGNED NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_journal_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_journal_date (entry_date), INDEX idx_journal_source (source_type, source_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS journal_lines (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, journal_entry_id BIGINT UNSIGNED NOT NULL,
+  account_id INT UNSIGNED NOT NULL, debit DECIMAL(14,2) NOT NULL DEFAULT 0,
+  credit DECIMAL(14,2) NOT NULL DEFAULT 0, memo VARCHAR(255),
+  CONSTRAINT fk_line_entry FOREIGN KEY (journal_entry_id) REFERENCES journal_entries(id) ON DELETE CASCADE,
+  CONSTRAINT fk_line_account FOREIGN KEY (account_id) REFERENCES accounts(id),
+  INDEX idx_line_account (account_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS payroll (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, payroll_no VARCHAR(30) NOT NULL UNIQUE,
+  trainer_id INT UNSIGNED NULL, employee_name VARCHAR(150) NOT NULL,
+  period_start DATE NOT NULL, period_end DATE NOT NULL, basic_salary DECIMAL(12,2) NOT NULL,
+  allowance DECIMAL(12,2) NOT NULL DEFAULT 0, deduction DECIMAL(12,2) NOT NULL DEFAULT 0,
+  net_pay DECIMAL(12,2) NOT NULL, bank_id INT UNSIGNED NOT NULL,
+  payment_date DATE NOT NULL, status ENUM('Paid','Void') DEFAULT 'Paid', user_id INT UNSIGNED NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_payroll_trainer FOREIGN KEY (trainer_id) REFERENCES trainers(id) ON DELETE SET NULL,
+  CONSTRAINT fk_payroll_bank FOREIGN KEY (bank_id) REFERENCES banks(id),
+  CONSTRAINT fk_payroll_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 INSERT IGNORE INTO expense_categories (id, name) VALUES
 (1,'Rent'),(2,'Utilities'),(3,'Salaries'),(4,'Equipment'),(5,'Maintenance'),(6,'Marketing'),(7,'Other');
 INSERT IGNORE INTO memberships (id, MembershipType, Price, Duration) VALUES
 (1,'Monthly',30,30),(2,'Quarterly',80,90),(3,'Annual',280,365);
+INSERT IGNORE INTO accounts (code,name,type,normal_balance) VALUES
+('1000','Cash and Bank','Asset','Debit'),('1100','Membership Receivable','Asset','Debit'),
+('1500','Gym Equipment','Asset','Debit'),('2000','Accounts Payable','Liability','Credit'),
+('3000','Owner Equity','Equity','Credit'),('4000','Membership Revenue','Revenue','Credit'),
+('4100','Other Revenue','Revenue','Credit'),('5000','Operating Expense','Expense','Debit'),
+('5100','Salary Expense','Expense','Debit'),('5200','Utilities Expense','Expense','Debit');
