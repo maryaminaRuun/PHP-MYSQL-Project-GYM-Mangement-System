@@ -1,11 +1,15 @@
 <?php
-include 'includes/init.php';
+include 'includes/session.php';
+include 'includes/functions.php';
+$notice = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = escape($_POST['email']);
+    verify_csrf();
+    $email = trim($_POST['email'] ?? '');
 
     // Check if the email exists
-    $user = read_where('users', "email='$email'");
+    $stmt=$conn->prepare("SELECT Email FROM users WHERE Email=? AND Status='Active' LIMIT 1");
+    $stmt->execute([$email]);$user=$stmt->fetch();
     if ($user) {
         // Generate a token and expiration time
         $token = bin2hex(random_bytes(50));
@@ -17,21 +21,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'token' => $token,
             'expires_at' => $expires_at
         ];
+        $conn->prepare('DELETE FROM password_resets WHERE email=?')->execute([$email]);
         insert('password_resets', $resetData);
 
         // Send the reset link to user's email
-        $resetLink = "https://yourwebsite.com/reset-password.php?token=$token";
+        $appUrl=rtrim(getenv('APP_URL')?:((!empty($_SERVER['HTTPS'])?'https':'http').'://'.($_SERVER['HTTP_HOST']??'localhost').rtrim(dirname($_SERVER['SCRIPT_NAME']??'/'),'/\\')),'/');
+        $resetLink = $appUrl . "/reset-password.php?token=" . urlencode($token);
         $subject = "Reset Your Password";
         $message = "Click this link to reset your password: $resetLink";
-        $headers = 'From: noreply@yourwebsite.com';
+        $headers = 'From: ' . (getenv('MAIL_FROM') ?: 'noreply@localhost');
 
         if (mail($email, $subject, $message, $headers)) {
-            showMessage(["A password reset link has been sent to your email.", "success"]);
+            $notice=["If the account exists, a reset link has been sent.", "success"];
         } else {
-            showMessage(["Failed to send the reset link. Please try again.", "danger"]);
+            error_log('Password reset email could not be sent for '.$email);
+            $notice=["Email delivery is not configured. Ask the administrator to configure PHP mail.", "warning"];
         }
     } else {
-        showMessage(["No account found with this email.", "danger"]);
+        $notice=["If the account exists, a reset link has been sent.", "success"];
     }
 }
 ?>
@@ -101,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="card-body">
               <!-- Logo -->
               <div class="app-brand justify-content-center mb-6">
-                <a href="index.html" class="app-brand-link gap-2">
+                <a href="index.php" class="app-brand-link gap-2">
                   <span class="app-brand-logo demo">
                     <svg
                       width="25"
@@ -157,7 +164,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <!-- /Logo -->
               <h4 class="mb-1">Forgot Password? 🔒</h4>
               <p class="mb-6">Enter your email and we'll send you instructions to reset your password</p>
+              <?php if($notice): ?><div class="alert alert-<?=escape($notice[1])?>"><?=escape($notice[0])?></div><?php endif; ?>
               <form id="formAuthentication" class="mb-6" method="POST" action="forgot-password.php">
+                <input type="hidden" name="csrf_token" value="<?=csrf_token()?>">
                 <div class="mb-6">
                   <label for="email" class="form-label">Email</label>
                   <input

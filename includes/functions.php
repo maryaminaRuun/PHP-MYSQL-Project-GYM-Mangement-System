@@ -310,9 +310,10 @@ function getgetStartTime_EndTim( $id)
 
 
 function getStatus($status){
-  return $status == 'Unpaid' 
-      ? "<span class='badge bg-danger'>Unpaid</span>" 
-      : "<span class='badge bg-success'>Paid</span>";
+  $classes=['Unpaid'=>'bg-danger','Partially Paid'=>'bg-warning','Paid'=>'bg-success','Void'=>'bg-secondary'];
+  $safeStatus=escape($status);
+  $class=$classes[$status]??'bg-secondary';
+  return "<span class='badge {$class}'>{$safeStatus}</span>";
 }
 
 

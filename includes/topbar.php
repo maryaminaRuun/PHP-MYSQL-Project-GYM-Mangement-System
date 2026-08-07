@@ -51,8 +51,8 @@
                                             </div>
 
                                             <div class="flex-grow-1">
-                                        <h6 class="mb-0">{{ session['name'] }}</h6>
-                                        <small class="text-muted">{{ session['role'] }}</small>
+                                        <h6 class="mb-0"><?= escape($_SESSION['name'] ?? 'User') ?></h6>
+                                        <small class="text-muted"><?= escape($_SESSION['role'] ?? '') ?></small>
                                     </div>
                                         </div>
                                     </a>
@@ -61,7 +61,7 @@
                                     <div class="dropdown-divider my-1"></div>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="Profile.php">
+                                    <a class="dropdown-item" href="profile.php">
                                         <i class="bx bx-user bx-md me-3"></i><span>My Profile</span>
                                     </a>
                                 </li>

@@ -1,7 +1,7 @@
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
     <div class="app-brand demo">
      
-        <a href="index.html" class="app-brand-link">
+        <a href="index.php" class="app-brand-link">
               <!-- <span class="app-brand-logo demo me-1">
                 <span style="color: var(--bs-primary)">
                   <svg width="30" height="24" viewBox="0 0 250 196" fill="none" xmlns="http://www.w3.org/2000/svg">

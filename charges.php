@@ -9,10 +9,16 @@ if (isset($_POST['btnCharge'])) {
     $member_id = $_POST['member_id'];
     
     // Charge the selected member
-    if (chargeMember($member_id)) {
-        // $message = ["Successfully Charged!", "success"];
-    } else {
-        // $message = ["Something Went Wrong!", "danger"];
+    try {
+        $conn->beginTransaction();
+        if (chargeMember($member_id)) {
+            $conn->commit();
+        } else {
+            $conn->rollBack();
+        }
+    } catch (Throwable $e) {
+        if ($conn->inTransaction()) $conn->rollBack();
+        $message = [$e->getMessage(), "danger"];
     }
 }
 

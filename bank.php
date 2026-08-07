@@ -1,6 +1,6 @@
 <?php 
 include 'includes/init.php'; 
-include 'Modals/bankModal.php';
+include 'modals/bankModal.php';
 $message = [];
 
 // Handle form submission (add, update, delete Bank account )
