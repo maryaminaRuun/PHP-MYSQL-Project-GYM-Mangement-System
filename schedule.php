@@ -47,9 +47,6 @@ $message = [];
 if (isset($_POST['btnDelete']) && isset($_POST['schedule_Id'])) {
     $schedule_Id = $_POST['schedule_Id'];
     
-    // Debugging line
-    echo "Schedule ID to delete: " . $schedule_Id; // Check if the ID is correct
-    
     if (delete('schedule', $schedule_Id)) {
         $message = ["Schedule deleted successfully!", "success"];
     } else {
@@ -141,7 +138,6 @@ if (isset($_GET['id'])) {
 <!-- /.container-fluid -->
 
 
-<?php include 'includes/footer.php'; ?>
 <script>
 
 function reset() {

@@ -8,12 +8,20 @@ if (isset($_SESSION['userId']) &&  $_SESSION['isLogin'] == true) {
 }
 $ms="";
 if(isset($_POST['btnlogin'])){
-   $email = trim(escape($_POST['email']));
-   $password = md5(escape($_POST['password']));
-
-   $user = read_where('users', "Email='$email' AND Password='$password'");
+   $email = trim($_POST['email'] ?? '');
+   $plainPassword = (string) ($_POST['password'] ?? '');
+   $stmt = $conn->prepare("SELECT * FROM users WHERE Email = ? AND Status = 'Active' LIMIT 1");
+   $stmt->execute([$email]);
+   $record = $stmt->fetch();
+   $valid = $record && (password_verify($plainPassword, $record['Password']) || hash_equals($record['Password'], md5($plainPassword)));
+   $user = $valid ? [$record] : [];
   //  print_r($user);
 if($user){
+  if (strlen($user[0]['Password']) === 32) {
+    $newHash = password_hash($plainPassword, PASSWORD_DEFAULT);
+    $conn->prepare('UPDATE users SET Password=? WHERE id=?')->execute([$newHash, $user[0]['id']]);
+  }
+  session_regenerate_id(true);
   $_SESSION['name']= $user[0]['FullName'];
   $_SESSION['userId']= $user[0]['id'];
   $_SESSION['isLogin']= true;

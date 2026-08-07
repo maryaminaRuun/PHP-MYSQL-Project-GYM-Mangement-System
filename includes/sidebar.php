@@ -124,6 +124,13 @@
             
         </li>
 
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">Operations</span></li>
+        <li class="menu-item"><a href="attendance.php" class="menu-link"><i class="menu-icon tf-icons bx bx-calendar-check"></i><div>Attendance</div></a></li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">Accounting</span></li>
+        <li class="menu-item"><a href="expenses.php" class="menu-link"><i class="menu-icon tf-icons bx bx-receipt"></i><div>Expenses</div></a></li>
+        <li class="menu-item"><a href="reports.php" class="menu-link"><i class="menu-icon tf-icons bx bx-line-chart"></i><div>Reports</div></a></li>
+
 
 
         
@@ -248,4 +255,3 @@
     </ul>
 </aside>
 <!-- / Menu -->
- 

@@ -120,7 +120,6 @@ if (isset($_POST['btnSave'])) {
 <!-- /.container-fluid -->
 
 
-<?php include 'includes/footer.php'; ?>
 
 
 

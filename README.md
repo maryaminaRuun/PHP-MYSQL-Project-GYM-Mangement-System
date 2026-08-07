@@ -28,3 +28,22 @@ A web-based Gym Management System designed to simplify gym operations such as me
 
 ## 📁 Project Structure
 
+## Installation
+
+1. Copy the project into your XAMPP/WAMP web root.
+2. Import `database/schema.sql` in phpMyAdmin.
+3. Configure the `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` environment variables (see `.env.example`). Defaults work with a standard local XAMPP installation.
+4. Visit `setup-admin.php` once to create the first administrator. The setup locks itself immediately afterward.
+5. Open `login.php` and sign in.
+
+## Completed business modules
+
+- Members, plans, trainers, classes, schedules and equipment
+- Member attendance check-in/check-out
+- Recurring membership charges and partial/full payments
+- Bank/cash balances with transaction-safe income and expenses
+- Expense categories and expense register
+- Date-filtered income, expenses, profit, receivables and attendance reports
+- Printable/PDF-ready reports, receipts, audit logs and secure password migration
+
+> Before upgrading an existing installation, back up its database. The canonical fresh-install schema is `database/schema.sql`.

@@ -1,7 +1,8 @@
 <?php include 'session.php';
       include 'functions.php';
-if (!isset($_SESSION['userId']) &&  $_SESSION['isLogin'] !== true) {
-    header("location: login.php");
+if (empty($_SESSION['userId']) || empty($_SESSION['isLogin'])) {
+    header("Location: login.php");
+    exit;
 }
 include 'header.php';
 include 'sidebar.php';

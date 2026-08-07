@@ -58,7 +58,7 @@ if (isset($_POST['btnCharge'])) {
                                 <td><?= read_column('members', "FullName", $charge['member_id']); ?></td>
                                 <td><?= read_column('members', "Phone", $charge['member_id']); ?></td>
                                 <td><?= read_column('users', "FullName", $charge['user_id']); ?></td>
-                                <td><?= read_column('memberships', "Price", $charge['id']); ?></td>
+                                <td><?= money($charge['Price']); ?></td>
                                 <td><?= $charge['date']; ?></td>
                                 <td><?= $charge['remarks']; ?></td>
                                 <td><?= getStatus($charge['status']); ?></td>

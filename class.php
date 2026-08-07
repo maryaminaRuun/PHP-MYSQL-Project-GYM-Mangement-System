@@ -118,10 +118,6 @@ $classes = read('class');
 <!-- /.container-fluid -->
 
 
-<?php include 'includes/footer.php'; ?>
-
-
-
 <!-- JS for filling modal with data -->
 <script>
 

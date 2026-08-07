@@ -1,5 +1,6 @@
 <?php 
 include 'includes/init.php';
+require_role(['Admin']);
 include 'modals/users-modal.php';
 $message = [];
 
@@ -9,7 +10,7 @@ if (isset($_POST['btnSignup'])) {
             "FullName" => trim(escape($_POST['FullName'])),
             "Username" => trim(escape($_POST['Username'])),
             "Email" => trim(escape($_POST['Email'])),
-            "Password" => trim(escape($_POST['Password'])),
+            "Password" => password_hash((string) $_POST['Password'], PASSWORD_DEFAULT),
             "Role" => trim(escape($_POST['Role'])),
             // "CreatedAt" => trim(escape($_POST['CreatedAt'])),
             "Status" => trim(escape($_POST['Status'])),
@@ -24,12 +25,12 @@ if (isset($_POST['btnSignup'])) {
             "FullName" => trim(escape($_POST['FullName'])),
             "Username" => trim(escape($_POST['Username'])),
             "Email" => trim(escape($_POST['Email'])),
-            "Password" => trim(escape($_POST['Password'])),
             "Role" => trim(escape($_POST['Role'])),
             // "CreatedAt" => trim(escape($_POST['CreatedAt'])),
             "Status" => trim(escape($_POST['Status'])),
         ];
 
+        if (!empty($_POST['Password'])) $data['Password'] = password_hash((string) $_POST['Password'], PASSWORD_DEFAULT);
         $result = update('users', $data);
         $message = $result ? ["Successfully updated!", "success"] : ["Sorry! Something went wrong", "danger"];
     }
