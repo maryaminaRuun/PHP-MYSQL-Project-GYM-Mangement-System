@@ -1,7 +1,7 @@
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
     <div class="app-brand demo">
      
-        <a href="index.html" class="app-brand-link">
+        <a href="index.php" class="app-brand-link">
               <!-- <span class="app-brand-logo demo me-1">
                 <span style="color: var(--bs-primary)">
                   <svg width="30" height="24" viewBox="0 0 250 196" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -123,6 +123,17 @@
 
             
         </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">Operations</span></li>
+        <li class="menu-item"><a href="attendance.php" class="menu-link"><i class="menu-icon tf-icons bx bx-calendar-check"></i><div>Attendance</div></a></li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">Accounting</span></li>
+        <li class="menu-item"><a href="accounts.php" class="menu-link"><i class="menu-icon tf-icons bx bx-book"></i><div>Chart of Accounts</div></a></li>
+        <li class="menu-item"><a href="journal.php" class="menu-link"><i class="menu-icon tf-icons bx bx-transfer"></i><div>General Journal</div></a></li>
+        <li class="menu-item"><a href="expenses.php" class="menu-link"><i class="menu-icon tf-icons bx bx-receipt"></i><div>Expenses</div></a></li>
+        <li class="menu-item"><a href="payroll.php" class="menu-link"><i class="menu-icon tf-icons bx bx-wallet"></i><div>Payroll</div></a></li>
+        <li class="menu-item"><a href="reports.php" class="menu-link"><i class="menu-icon tf-icons bx bx-line-chart"></i><div>Reports</div></a></li>
+        <li class="menu-item"><a href="financial-statements.php" class="menu-link"><i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i><div>Financial Statements</div></a></li>
 
 
 
@@ -248,4 +259,3 @@
     </ul>
 </aside>
 <!-- / Menu -->
- 

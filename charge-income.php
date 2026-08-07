@@ -5,18 +5,40 @@ include 'modals/charge-income-modal.php';
 $message = [];
 
 if (isset($_POST['btnSave'])) {
-    $data = [
-        "member_id" => trim(escape($_POST['member'])),
-        "charge_id" => trim(escape($_POST['charge'])),
-        "user_id" => $_SESSION['userId'],
-        "amount" => trim(escape($_POST['amount'])),
-        "bank_id" => trim(escape($_POST['bank']))
-    ];
-
-    if (insert('payments', $data)) {
-        $message = ["Successfully Recorded the payment!", "success"];
-    } else {
-        $message = ["Sorry! Something went wrong", "danger"];
+    verify_csrf();
+    $memberId = (int) ($_POST['member'] ?? 0);
+    $chargeId = (int) ($_POST['charge'] ?? 0);
+    $bankId = (int) ($_POST['bank'] ?? 0);
+    $amount = (float) ($_POST['amount'] ?? 0);
+    try {
+        $conn->beginTransaction();
+        $chargeStmt = $conn->prepare("SELECT Price, status FROM charges WHERE id=? AND member_id=? FOR UPDATE");
+        $chargeStmt->execute([$chargeId, $memberId]);
+        $charge = $chargeStmt->fetch();
+        if (!$charge || $charge['status'] === 'Void') throw new RuntimeException('Invalid charge selected.');
+        $paidStmt = $conn->prepare('SELECT COALESCE(SUM(amount),0) FROM payments WHERE charge_id=?');
+        $paidStmt->execute([$chargeId]);
+        $alreadyPaid = (float) $paidStmt->fetchColumn();
+        $remaining = (float) $charge['Price'] - $alreadyPaid;
+        if ($amount <= 0 || $amount > $remaining) throw new RuntimeException('Payment must be greater than zero and not exceed the outstanding balance.');
+        $receipt = 'RCP-' . date('Ymd') . '-' . strtoupper(bin2hex(random_bytes(3)));
+        $stmt = $conn->prepare('INSERT INTO payments(receipt_no,member_id,charge_id,user_id,amount,bank_id) VALUES(?,?,?,?,?,?)');
+        $stmt->execute([$receipt,$memberId,$chargeId,$_SESSION['userId'],$amount,$bankId]);
+        $paymentId=(int)$conn->lastInsertId();
+        $conn->prepare('UPDATE banks SET balance=balance+? WHERE id=?')->execute([$amount,$bankId]);
+        $newPaid = $alreadyPaid + $amount;
+        $status = $newPaid >= (float)$charge['Price'] ? 'Paid' : 'Partially Paid';
+        $conn->prepare('UPDATE charges SET status=? WHERE id=?')->execute([$status,$chargeId]);
+        post_journal(date('Y-m-d'),'Membership payment '.$receipt,'payment',$paymentId,[
+            ['account_id'=>account_id('1000'),'debit'=>$amount,'credit'=>0],
+            ['account_id'=>account_id('1100'),'debit'=>0,'credit'=>$amount]
+        ]);
+        audit('create','payment',$paymentId,['receipt_no'=>$receipt,'amount'=>$amount]);
+        $conn->commit();
+        $message = ["Payment recorded. Receipt: {$receipt}", "success"];
+    } catch (Throwable $e) {
+        if ($conn->inTransaction()) $conn->rollBack();
+        $message = [$e->getMessage(), "danger"];
     }
 }
 ?>
@@ -49,7 +71,7 @@ if (isset($_POST['btnSave'])) {
                             <th>Amount</th>
                             <th>Payment Date</th>
                             <th>Banks</th>
-                            <th>Actions</th>
+                            <th>Receipt</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -61,6 +83,7 @@ if (isset($_POST['btnSave'])) {
                                 <td><?= $payment['amount']; ?></td>
                                 <td><?= $payment['PaymentDate']; ?></td>
                                 <td><?= read_column('banks', "name", $payment['bank_id']); ?></td>
+                                <td><a href="receipt.php?id=<?= (int)$payment['id'] ?>" class="btn btn-sm btn-outline-primary"><?= escape($payment['receipt_no'] ?? 'View'); ?></a></td>
                             </tr>
                         <?php } ?>
                     </tbody>

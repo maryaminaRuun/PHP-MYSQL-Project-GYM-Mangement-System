@@ -9,10 +9,16 @@ if (isset($_POST['btnCharge'])) {
     $member_id = $_POST['member_id'];
     
     // Charge the selected member
-    if (chargeMember($member_id)) {
-        // $message = ["Successfully Charged!", "success"];
-    } else {
-        // $message = ["Something Went Wrong!", "danger"];
+    try {
+        $conn->beginTransaction();
+        if (chargeMember($member_id)) {
+            $conn->commit();
+        } else {
+            $conn->rollBack();
+        }
+    } catch (Throwable $e) {
+        if ($conn->inTransaction()) $conn->rollBack();
+        $message = [$e->getMessage(), "danger"];
     }
 }
 
@@ -58,11 +64,12 @@ if (isset($_POST['btnCharge'])) {
                                 <td><?= read_column('members', "FullName", $charge['member_id']); ?></td>
                                 <td><?= read_column('members', "Phone", $charge['member_id']); ?></td>
                                 <td><?= read_column('users', "FullName", $charge['user_id']); ?></td>
-                                <td><?= read_column('memberships', "Price", $charge['id']); ?></td>
+                                <td><?= money($charge['Price']); ?></td>
                                 <td><?= $charge['date']; ?></td>
                                 <td><?= $charge['remarks']; ?></td>
                                 <td><?= getStatus($charge['status']); ?></td>
                                 <td>
+                                    <a href="invoice.php?id=<?= (int)$charge['id'] ?>" class="btn btn-outline-secondary btn-sm">Invoice</a>
                                     <!-- Example action to charge a member -->
                                     <form method="POST" action="">
                                         <input type="hidden" name="member_id" value="<?= $charge['member_id']; ?>">

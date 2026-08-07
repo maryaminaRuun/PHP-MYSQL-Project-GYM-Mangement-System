@@ -92,7 +92,79 @@ function delete($table, $id)
 // Function to escape HTML characters
 function escape($input)
 {
-  return htmlspecialchars($input);
+  return htmlspecialchars((string) $input, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function csrf_token(): string
+{
+  if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+  }
+  return $_SESSION['csrf_token'];
+}
+
+function verify_csrf(): void
+{
+  $token = $_POST['csrf_token'] ?? '';
+  if (!is_string($token) || !hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+    http_response_code(419);
+    exit('Your session expired. Refresh the page and try again.');
+  }
+}
+
+function money($amount): string
+{
+  return '$' . number_format((float) $amount, 2);
+}
+
+function require_role(array $roles): void
+{
+  if (!in_array($_SESSION['role'] ?? '', $roles, true)) {
+    http_response_code(403);
+    exit('You do not have permission to access this page.');
+  }
+}
+
+function audit(string $action, string $entity, ?int $entityId = null, array $details = []): void
+{
+  global $conn;
+  $stmt = $conn->prepare('INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address) VALUES (?, ?, ?, ?, ?, ?)');
+  $stmt->execute([
+    $_SESSION['userId'] ?? null,
+    $action,
+    $entity,
+    $entityId,
+    $details ? json_encode($details, JSON_UNESCAPED_UNICODE) : null,
+    $_SERVER['REMOTE_ADDR'] ?? null,
+  ]);
+}
+
+function account_id(string $code): int
+{
+  global $conn;
+  $stmt = $conn->prepare("SELECT id FROM accounts WHERE code=? AND status='Active'");
+  $stmt->execute([$code]);
+  $id = $stmt->fetchColumn();
+  if (!$id) throw new RuntimeException("Accounting account {$code} is not configured.");
+  return (int) $id;
+}
+
+function post_journal(string $date, string $description, string $sourceType, int $sourceId, array $lines): int
+{
+  global $conn;
+  $debits = 0.0; $credits = 0.0;
+  foreach ($lines as $line) { $debits += (float)($line['debit'] ?? 0); $credits += (float)($line['credit'] ?? 0); }
+  if ($debits <= 0 || abs($debits - $credits) > 0.005) throw new RuntimeException('Journal entry is not balanced.');
+  $existing = $conn->prepare("SELECT id FROM journal_entries WHERE source_type=? AND source_id=? AND status='Posted'");
+  $existing->execute([$sourceType,$sourceId]);
+  if ($id=$existing->fetchColumn()) return (int)$id;
+  $entryNo='JE-'.date('Ymd').'-'.strtoupper(bin2hex(random_bytes(3)));
+  $stmt=$conn->prepare('INSERT INTO journal_entries(entry_no,entry_date,description,source_type,source_id,user_id) VALUES(?,?,?,?,?,?)');
+  $stmt->execute([$entryNo,$date,$description,$sourceType,$sourceId,$_SESSION['userId']??null]);
+  $entryId=(int)$conn->lastInsertId();
+  $lineStmt=$conn->prepare('INSERT INTO journal_lines(journal_entry_id,account_id,debit,credit,memo) VALUES(?,?,?,?,?)');
+  foreach($lines as $line) $lineStmt->execute([$entryId,(int)$line['account_id'],(float)($line['debit']??0),(float)($line['credit']??0),$line['memo']??null]);
+  return $entryId;
 }
 
 // Function to show a message (e.g., success or error messages)
@@ -100,7 +172,7 @@ function showMessage($ms)
 {
   $text = $ms[0];
   $color = $ms[1];
-  echo "<p class='text-$color p-3' style='text-align:center'> $text </p>";
+  echo "<p class='text-" . escape($color) . " p-3' style='text-align:center'> " . escape($text) . " </p>";
   echo "<script> removeAlert(); </script>";
 }
 
@@ -111,12 +183,20 @@ function charge(){
   foreach(read('members') as $member){
     $member_id = $member['id'];
     $remark = date("F, Y")." Charges";
-    $price = read_column('memerships', 'Price', $member['MembershipID']);
+    $price = read_column('memberships', 'Price', $member['MembershipID']);
     $user = $_SESSION['userId'];
   
-    $sql = "INSERT INTO charges (`member_id`, `user_id`, `Price`, `remarks`) 
-            VALUES($member_id, $user, $price, '$remark')";
-    $stm = $conn->query($sql);
+    $billingMonth = date('Y-m');
+    $sql = "INSERT IGNORE INTO charges (`member_id`, `user_id`, `Price`, `billing_month`, `remarks`) VALUES(?,?,?,?,?)";
+    $stm = $conn->prepare($sql);
+    $stm->execute([$member_id, $user, $price, $billingMonth, $remark]);
+    if ($stm->rowCount()) {
+      $chargeId=(int)$conn->lastInsertId();
+      post_journal(date('Y-m-d'),$remark,'charge',$chargeId,[
+        ['account_id'=>account_id('1100'),'debit'=>(float)$price],
+        ['account_id'=>account_id('4000'),'credit'=>(float)$price]
+      ]);
+    }
   }
   return $stm  ? true : false;
 }
@@ -173,8 +253,8 @@ function chargeMember($member_id)
     $remark = date("F, Y") . " Charge";
 
     // SQL query to insert the charge for the member
-    $sql = "INSERT INTO charges (`member_id`, `user_id`, `Price`, `remarks`) 
-            VALUES(:member_id, :user_id, :price, :remarks)";
+    $sql = "INSERT INTO charges (`member_id`, `user_id`, `Price`, `billing_month`, `remarks`)
+            VALUES(:member_id, :user_id, :price, :billing_month, :remarks)";
   
     // Prepare the statement
     $stmt = $conn->prepare($sql);
@@ -183,10 +263,18 @@ function chargeMember($member_id)
     $stmt->bindParam(':member_id', $member_id, PDO::PARAM_INT);
     $stmt->bindParam(':user_id', $user, PDO::PARAM_INT);
     $stmt->bindParam(':price', $price, PDO::PARAM_STR);
+    $stmt->bindParam(':billing_month', $current_month, PDO::PARAM_STR);
     $stmt->bindParam(':remarks', $remark, PDO::PARAM_STR);
 
     // Execute the statement
     $result = $stmt->execute();
+    if ($result) {
+      $chargeId=(int)$conn->lastInsertId();
+      post_journal(date('Y-m-d'),$remark,'charge',$chargeId,[
+        ['account_id'=>account_id('1100'),'debit'=>(float)$price],
+        ['account_id'=>account_id('4000'),'credit'=>(float)$price]
+      ]);
+    }
 
     // Return whether the insert was successful
     if ($result) {
@@ -222,9 +310,10 @@ function getgetStartTime_EndTim( $id)
 
 
 function getStatus($status){
-  return $status == 'Unpaid' 
-      ? "<span class='badge bg-danger'>Unpaid</span>" 
-      : "<span class='badge bg-success'>Paid</span>";
+  $classes=['Unpaid'=>'bg-danger','Partially Paid'=>'bg-warning','Paid'=>'bg-success','Void'=>'bg-secondary'];
+  $safeStatus=escape($status);
+  $class=$classes[$status]??'bg-secondary';
+  return "<span class='badge {$class}'>{$safeStatus}</span>";
 }
 
 
@@ -233,9 +322,9 @@ function getStatus($status){
 function getClassSchedules($conn, $class_name) {
     // Prepare the SQL query
     $sql = "
-    SELECT s.schedule_id, c.class_name,  s.start_time, s.end_time
+    SELECT s.id AS schedule_id, c.class_name, s.start_time, s.end_time
     FROM schedule s
-    JOIN class c ON s.class_id = c.class_id
+    JOIN class c ON s.class_id = c.id
     WHERE c.class_name = ?
     ";
     

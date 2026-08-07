@@ -1,6 +1,6 @@
 <?php 
 include 'includes/init.php'; 
-include 'Modals/classModal.php';
+include 'modals/classModal.php';
 $message = [];
 
 // Handle form submission (add, update, delete class)
@@ -116,10 +116,6 @@ $classes = read('class');
 
 </div>
 <!-- /.container-fluid -->
-
-
-<?php include 'includes/footer.php'; ?>
-
 
 
 <!-- JS for filling modal with data -->

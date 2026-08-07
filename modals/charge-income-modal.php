@@ -8,6 +8,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                     <div class="form-group mb-3">
                         <label for="member">Select Member</label>
                         <select name="member" id="member" class="form-select" >
